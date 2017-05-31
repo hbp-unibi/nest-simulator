@@ -72,7 +72,7 @@ SLIStartup::checkpath( std::string const& path, std::string& result ) const
   else
     result.erase();
 
-  return ( in );
+  return ( bool(in) );
 }
 
 
