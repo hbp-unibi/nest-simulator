@@ -35,9 +35,10 @@
 #include "universal_data_logger.h"
 #include "recordables_map.h"
 
+/*
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
-#include <gsl/gsl_odeiv.h>
+#include <gsl/gsl_odeiv.h>*/
 
 /* BeginDocumentation
 Name: iaf_cond_exp - Simple conductance based leaky integrate-and-fire neuron model.
@@ -213,10 +214,10 @@ private:
     RingBuffer currents_;
 
     /** GSL ODE stuff */
-    gsl_odeiv_step* s_;    //!< stepping function
+    /*gsl_odeiv_step* s_;    //!< stepping function
     gsl_odeiv_control* c_; //!< adaptive stepsize control function
     gsl_odeiv_evolve* e_;  //!< evolution function
-    gsl_odeiv_system sys_; //!< struct describing system
+    gsl_odeiv_system sys_; //!< struct describing system*/
 
     // IntergrationStep_ should be reset with the neuron on ResetNetwork,
     // but remain unchanged during calibration. Since it is initialized with

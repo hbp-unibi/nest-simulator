@@ -86,7 +86,7 @@ nest::iaf_cond_exp_dynamics( double, const double y[], double f[], void* pnode )
   f[ 1 ] = -y[ S::G_EXC ] / node.P_.tau_synE;
   f[ 2 ] = -y[ S::G_INH ] / node.P_.tau_synI;
 
-  return GSL_SUCCESS;
+  //return GSL_SUCCESS;
 }
 
 /* ----------------------------------------------------------------
@@ -199,9 +199,6 @@ nest::iaf_cond_exp::State_::set( const DictionaryDatum& d, const Parameters_& )
 
 nest::iaf_cond_exp::Buffers_::Buffers_( iaf_cond_exp& n )
   : logger_( n )
-  , s_( 0 )
-  , c_( 0 )
-  , e_( 0 )
 {
   // Initialization of the remaining members is deferred to
   // init_buffers_().
@@ -209,9 +206,6 @@ nest::iaf_cond_exp::Buffers_::Buffers_( iaf_cond_exp& n )
 
 nest::iaf_cond_exp::Buffers_::Buffers_( const Buffers_&, iaf_cond_exp& n )
   : logger_( n )
-  , s_( 0 )
-  , c_( 0 )
-  , e_( 0 )
 {
   // Initialization of the remaining members is deferred to
   // init_buffers_().
@@ -240,13 +234,6 @@ nest::iaf_cond_exp::iaf_cond_exp( const iaf_cond_exp& n )
 
 nest::iaf_cond_exp::~iaf_cond_exp()
 {
-  // GSL structs may not have been allocated, so we need to protect destruction
-  if ( B_.s_ )
-    gsl_odeiv_step_free( B_.s_ );
-  if ( B_.c_ )
-    gsl_odeiv_control_free( B_.c_ );
-  if ( B_.e_ )
-    gsl_odeiv_evolve_free( B_.e_ );
 }
 
 /* ----------------------------------------------------------------
@@ -272,27 +259,6 @@ nest::iaf_cond_exp::init_buffers_()
 
   B_.step_ = Time::get_resolution().get_ms();
   B_.IntegrationStep_ = B_.step_;
-
-  if ( B_.s_ == 0 )
-    B_.s_ = gsl_odeiv_step_alloc( gsl_odeiv_step_rkf45, State_::STATE_VEC_SIZE );
-  else
-    gsl_odeiv_step_reset( B_.s_ );
-
-  if ( B_.c_ == 0 )
-    B_.c_ = gsl_odeiv_control_y_new( 1e-3, 0.0 );
-  else
-    gsl_odeiv_control_init( B_.c_, 1e-3, 0.0, 1.0, 0.0 );
-
-  if ( B_.e_ == 0 )
-    B_.e_ = gsl_odeiv_evolve_alloc( State_::STATE_VEC_SIZE );
-  else
-    gsl_odeiv_evolve_reset( B_.e_ );
-
-  B_.sys_.function = iaf_cond_exp_dynamics;
-  B_.sys_.jacobian = NULL;
-  B_.sys_.dimension = State_::STATE_VEC_SIZE;
-  B_.sys_.params = reinterpret_cast< void* >( this );
-
   B_.I_stim_ = 0.0;
 }
 
@@ -302,6 +268,7 @@ nest::iaf_cond_exp::calibrate()
   B_.logger_.init(); // ensures initialization in case mm connected after Simulate
 
   V_.RefractoryCounts_ = Time( Time::ms( P_.t_ref_ ) ).get_steps();
+  //V_.RefractoryCounts_ = int(P_.t_ref_/B_.IntegrationStep_);
   assert( V_.RefractoryCounts_ >= 0 ); // since t_ref_ >= 0, this can only fail in error
 }
 
@@ -318,9 +285,6 @@ nest::iaf_cond_exp::update( Time const& origin, const long_t from, const long_t 
 
   for ( long_t lag = from; lag < to; ++lag )
   {
-
-    double t = 0.0;
-
     // numerical integration with adaptive step size control:
     // ------------------------------------------------------
     // gsl_odeiv_evolve_apply performs only a single numerical
@@ -333,7 +297,15 @@ nest::iaf_cond_exp::update( Time const& origin, const long_t from, const long_t 
     // enforce setting IntegrationStep to step-t; this is of advantage
     // for a consistent and efficient integration across subsequent
     // simulation intervals
-    while ( t < B_.step_ )
+
+    const double I_syn_exc = S_.y_[ State_::G_EXC ] * ( S_.y_[ State_::V_M ] - P_.E_ex );
+    const double I_syn_inh = S_.y_[ State_::G_INH ] * (S_.y_[ State_::V_M ] - P_.E_in );
+    const double I_L = P_.g_L * ( S_.y_[ State_::V_M ] - P_.E_L );
+
+    S_.y_[ State_::V_M ]  += B_.IntegrationStep_*( -I_L + B_.I_stim_ + P_.I_e - I_syn_exc - I_syn_inh ) / P_.C_m;
+	S_.y_[ State_::G_EXC ] += B_.IntegrationStep_*(-S_.y_[ State_::G_EXC ] / P_.tau_synE);
+	S_.y_[ State_::G_INH ] += B_.IntegrationStep_*(-S_.y_[ State_::G_INH ] / P_.tau_synI);
+	/*while ( t < B_.step_ )
     {
       const int status = gsl_odeiv_evolve_apply( B_.e_,
         B_.c_,
@@ -346,7 +318,7 @@ nest::iaf_cond_exp::update( Time const& origin, const long_t from, const long_t 
 
       if ( status != GSL_SUCCESS )
         throw GSLSolverFailure( get_name(), status );
-    }
+    }*/
 
     S_.y_[ State_::G_EXC ] += B_.spike_exc_.get_value( lag );
     S_.y_[ State_::G_INH ] += B_.spike_inh_.get_value( lag );
