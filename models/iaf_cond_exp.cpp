@@ -303,23 +303,8 @@ nest::iaf_cond_exp::update( Time const& origin, const long_t from, const long_t 
     const double I_L = P_.g_L * ( S_.y_[ State_::V_M ] - P_.E_L );
 
     S_.y_[ State_::V_M ]  += B_.IntegrationStep_*( -I_L + B_.I_stim_ + P_.I_e - I_syn_exc - I_syn_inh ) / P_.C_m;
-	S_.y_[ State_::G_EXC ] += B_.IntegrationStep_*(-S_.y_[ State_::G_EXC ] / P_.tau_synE);
-	S_.y_[ State_::G_INH ] += B_.IntegrationStep_*(-S_.y_[ State_::G_INH ] / P_.tau_synI);
-	/*while ( t < B_.step_ )
-    {
-      const int status = gsl_odeiv_evolve_apply( B_.e_,
-        B_.c_,
-        B_.s_,
-        &B_.sys_,             // system of ODE
-        &t,                   // from t
-        B_.step_,             // to t <= step
-        &B_.IntegrationStep_, // integration step size
-        S_.y_ );              // neuronal state
-
-      if ( status != GSL_SUCCESS )
-        throw GSLSolverFailure( get_name(), status );
-    }*/
-
+    S_.y_[ State_::G_EXC ] += B_.IntegrationStep_*(-S_.y_[ State_::G_EXC ] / P_.tau_synE);
+    S_.y_[ State_::G_INH ] += B_.IntegrationStep_*(-S_.y_[ State_::G_INH ] / P_.tau_synI);
     S_.y_[ State_::G_EXC ] += B_.spike_exc_.get_value( lag );
     S_.y_[ State_::G_INH ] += B_.spike_inh_.get_value( lag );
 
